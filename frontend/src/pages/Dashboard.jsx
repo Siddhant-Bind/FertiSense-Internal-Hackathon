@@ -43,8 +43,7 @@ export default function Dashboard() {
 
         <div className="stats">
           <div className="stat"><b>{recs ? recs.length : "–"}</b><span>Reports saved</span></div>
-          <div className="stat"><b>{recs ? thisSeason : "–"}</b><span>In the last 4 months</span></div>
-          <div className="stat"><b>{avgScore}</b><span>Average soil health score</span></div>
+         
         </div>
 
         <section className="panel" aria-labelledby="hist">
@@ -84,7 +83,7 @@ export default function Dashboard() {
                     <div>
                       
                       <div className="t">{fieldName(r)}</div>
-                      <div className="s">{r.rec_fertilizer} · {r.rec_quantity} kg/acre</div>
+                      <div className="s">{r.rec_fertilizer}  {r.rec_quantity} kg/acre</div>
                     </div>
                     <div className="hide-sm">
                       <div className="t">{fmt(r.created_at)}</div>
