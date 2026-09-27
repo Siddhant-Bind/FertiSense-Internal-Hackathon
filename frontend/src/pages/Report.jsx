@@ -166,9 +166,6 @@ export default function Report() {
             {advisory.warning && <div className="form-alert" style={{ marginTop: 18 }}><b>Important:</b> {advisory.warning}</div>}
           </section>}
 
-          <div>
-            <button className="btn btn-danger" onClick={remove}>Delete report</button>
-          </div>
         </div>
       </main>
       {toast && <div className="toast" role="status">{toast}</div>}
