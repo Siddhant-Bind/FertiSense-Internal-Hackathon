@@ -1,6 +1,6 @@
 from fastapi import APIRouter, HTTPException, status, Depends
 from app.schemas.auth import UserSignup, UserLogin, TokenResponse
-from app.db.supabase_client import supabase
+from app.db.supabase_client import supabase, get_admin_client
 
 router = APIRouter()
 
@@ -17,9 +17,11 @@ def signup(user_data: UserSignup):
         if not user:
             raise HTTPException(status_code=400, detail="Signup failed. User may already exist.")
             
-        # Insert the extra info into public.users
+        # Insert the extra info through a fresh service-role client. The shared
+        # client can inherit the newly signed-in user's session, which makes
+        # this write subject to RLS and previously caused a silent failure.
         try:
-            supabase.table("users").upsert({
+            profile_response = get_admin_client().table("users").upsert({
                 "id": user.id,
                 "full_name": user_data.name,
                 "email_or_phone": user_data.email,
@@ -27,9 +29,12 @@ def signup(user_data: UserSignup):
                 "state": user_data.state,
                 "district": user_data.district
             }).execute()
+            if not profile_response.data:
+                raise RuntimeError("User profile was not saved.")
         except Exception as insert_e:
             import logging
             logging.getLogger(__name__).error(f"Failed to insert public user: {insert_e}")
+            raise HTTPException(status_code=500, detail="Account created, but the user profile could not be saved. Please contact support.")
 
         return TokenResponse(
             access_token=auth_response.session.access_token if auth_response.session else "",
@@ -66,8 +71,10 @@ class UserProfile(BaseModel):
     id: str
     full_name: str | None = None
     email_or_phone: str | None = None
+    mobile_number: str | None = None
     state: str | None = None
     district: str | None = None
+    created_at: str | None = None
 
 security = HTTPBearer()
 
@@ -79,7 +86,9 @@ def get_me(credentials: HTTPAuthorizationCredentials = Depends(security)):
             raise HTTPException(status_code=401, detail="Invalid token")
             
         user_id = user_response.user.id
-        db_user = supabase.table("users").select("*").eq("id", user_id).execute()
+        # Read the profile through a fresh service-role client. The shared
+        # client may hold an auth session and be constrained by users-table RLS.
+        db_user = get_admin_client().table("users").select("*").eq("id", user_id).execute()
         
         if not db_user.data:
             return UserProfile(id=str(user_id), email_or_phone=user_response.user.email)
@@ -89,8 +98,10 @@ def get_me(credentials: HTTPAuthorizationCredentials = Depends(security)):
             id=u.get("id"),
             full_name=u.get("full_name"),
             email_or_phone=u.get("email_or_phone"),
+            mobile_number=u.get("mobile_number"),
             state=u.get("state"),
-            district=u.get("district")
+            district=u.get("district"),
+            created_at=str(u["created_at"]) if u.get("created_at") else None,
         )
     except Exception as e:
         raise HTTPException(status_code=401, detail=str(e))

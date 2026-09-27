@@ -5,6 +5,16 @@ const BACKEND_URL = import.meta.env.VITE_API_URL || "http://localhost:8000/api/v
 
 const AuthCtx = createContext(undefined);
 
+const profileToUser = (profile) => ({
+  id: profile.id,
+  name: profile.full_name,
+  email: profile.email_or_phone,
+  phone: profile.mobile_number?.replace(/^\+91-?/, "") || "",
+  state: profile.state || "",
+  district: profile.district || "",
+  createdAt: profile.created_at || null,
+});
+
 function decodeJwt(token) {
   try {
     return JSON.parse(atob(token.split('.')[1]));
@@ -38,7 +48,7 @@ export function AuthProvider({ children }) {
     }
     try {
       const res = await api.get('/auth/me');
-      setUser({ id: res.data.id, name: res.data.full_name, email: res.data.email_or_phone });
+      setUser(profileToUser(res.data));
     } catch (error) {
       localStorage.removeItem("token");
       setToken(null);
@@ -60,7 +70,7 @@ export function AuthProvider({ children }) {
         
         try {
           const meRes = await axios.get(`${BACKEND_URL}/auth/me`, { headers: { Authorization: `Bearer ${res.data.access_token}` } });
-          setUser({ id: meRes.data.id, name: meRes.data.full_name, email: meRes.data.email_or_phone });
+          setUser(profileToUser(meRes.data));
         } catch (e) {
           setUser({ id: res.data.user_id });
         }
@@ -83,7 +93,7 @@ export function AuthProvider({ children }) {
 
         try {
           const meRes = await axios.get(`${BACKEND_URL}/auth/me`, { headers: { Authorization: `Bearer ${res.data.access_token}` } });
-          setUser({ id: meRes.data.id, name: meRes.data.full_name, email: meRes.data.email_or_phone });
+          setUser(profileToUser(meRes.data));
         } catch (e) {
           setUser({ id: res.data.user_id });
         }

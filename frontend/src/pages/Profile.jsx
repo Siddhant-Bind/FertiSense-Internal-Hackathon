@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import Header from "../components/Header";
 import DistrictPicker from "../components/DistrictPicker";
@@ -9,10 +9,16 @@ import { validators } from "../lib/validation";
 
 export default function Profile() {
   const { user, updateUser, signOut } = useAuth();
-  const [f, setF] = useState({ phone: user.phone, state: user.state, district: user.district });
+  const [f, setF] = useState({ phone: user.phone || "", state: user.state || "", district: user.district || "" });
   const [errors, setErrors] = useState({});
   const [msg, setMsg] = useState("");
   const [busy, setBusy] = useState(false);
+
+  // /auth/me can complete after this route mounts. Keep form fields in sync
+  // with the fetched profile rather than preserving the initial empty values.
+  useEffect(() => {
+    setF({ phone: user.phone || "", state: user.state || "", district: user.district || "" });
+  }, [user.phone, user.state, user.district]);
 
   const save = async (e) => {
     e.preventDefault();
@@ -34,8 +40,8 @@ export default function Profile() {
         <div className="profile-grid">
           <div className="panel profile-card">
             <div className="avatar">{initials(user.email)}</div>
-            <b style={{ wordBreak: "break-all" }}>{user.email}</b>
-            <p className="muted small" style={{ marginTop: 4 }}>Member since {new Date(user.createdAt).toLocaleDateString("en-IN", { month: "long", year: "numeric" })}</p>
+            <b style={{ wordBreak: "break-all" }}>{user.name}</b>
+            <p className="muted small" style={{ marginTop: 4 }}>Member since {user.createdAt ? new Date(user.createdAt).toLocaleDateString("en-IN", { month: "long", year: "numeric" }) : "—"}</p>
             <button className="btn btn-ghost btn-block" style={{ marginTop: 18 }} onClick={signOut}>Sign out</button>
           </div>
           <form className="panel form" onSubmit={save} noValidate>
