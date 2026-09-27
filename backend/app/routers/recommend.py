@@ -8,6 +8,7 @@ from app.services.weather_service import get_weather
 from app.services.ml_service import predict_fertilizer
 from app.services.llm_service import get_llm_recommendation
 from app.services.blend_service import calculate_blend_metrics
+from app.services.dosage_service import apply_dosage_clamp
 from app.db.supabase_client import supabase, get_admin_client
 
 router = APIRouter()
@@ -85,10 +86,12 @@ async def recommend(req: RecommendRequest, user_id: Optional[str] = Depends(get_
     # 6. Blend Quantification
     enriched_blend, blend_total_cost, npk_fulfillment = calculate_blend_metrics(llm_output["blend"])
 
-    # 7. Dosage Clamp (REMOVED per user request)
-    clamped_qty = llm_output["quantity"]
-    final_timing = llm_output["timing"]
-    final_explanation = llm_output["explanation"]
+    # 7. Dosage Clamp: enforce both the per-application and cumulative limits.
+    clamped_qty, timing_override, explanation_override = apply_dosage_clamp(
+        req.field_id, rec_fertilizer_id, llm_output["quantity"]
+    )
+    final_timing = timing_override or llm_output["timing"]
+    final_explanation = explanation_override or llm_output["explanation"]
     
     # 8. Log and respond
     insert_data = {

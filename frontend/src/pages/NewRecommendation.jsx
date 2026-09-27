@@ -39,7 +39,7 @@ export default function NewRecommendation() {
     district: user?.district || "",
     districtId: null,
     village: null,
-    soilType: "", crop: "", growthStage: "",
+    soilType: "", crop: "", growthStage: "", moisture: "",
     previous: [{ fertilizer: "", quantity: "", unit: "kg" }],
     hasTest: false, soilTest: { N: "", P: "", K: "", pH: "", OC: "" },
   });
@@ -107,6 +107,9 @@ export default function NewRecommendation() {
     if (!f.crop) e.crop = "Choose the crop";
     if (!f.village) e.village = "Choose your village";
     if (!f.growthStage) e.growthStage = "Choose the crop's current stage";
+    if (f.moisture === "" || !Number.isFinite(Number(f.moisture)) || Number(f.moisture) < 0 || Number(f.moisture) > 100) {
+      e.moisture = "Enter moisture content between 0 and 100%";
+    }
     f.previous.forEach((r, i) => {
       if (r.fertilizer && !(+r.quantity > 0)) e[`prev${i}`] = "Enter the quantity used";
       if (!r.fertilizer && r.quantity !== "") e[`prev${i}`] = "Choose the fertilizer";
@@ -128,7 +131,7 @@ export default function NewRecommendation() {
         soil_type_id: parseInt(f.soilType, 10),
         crop_type_id: parseInt(f.crop, 10),
         growth_stage: f.growthStage,
-        moisture: 45.0, // Default for now unless UI provides it
+        moisture: Number(f.moisture),
         is_continuation: false,
       };
       
@@ -211,6 +214,14 @@ export default function NewRecommendation() {
             </div>
 
             <hr className="divider" />
+            <div className="section-title">Field conditions</div>
+            <Field id="moisture" label="Moisture content (%)" error={errors.moisture}
+              hint="Enter the current soil moisture as a percentage.">
+              <input id="moisture" type="number" min="0" max="100" step="0.1" inputMode="decimal" className="input"
+                placeholder="e.g. 45" value={f.moisture} onChange={(e) => set({ moisture: e.target.value })} />
+            </Field>
+
+            <hr className="divider" />
             <div className="section-title">Previously used fertilizer</div>
             <p className="muted small" style={{ marginTop: -6, marginBottom: 14 }}>What you applied per acre last season on this field. Leave empty if you don't know.</p>
             <div className="prev-list">
@@ -262,6 +273,7 @@ export default function NewRecommendation() {
               <div><dt>Soil</dt><dd>{soilsData.find(s => s.id.toString() === f.soilType)?.soil_name || "Not selected"}</dd></div>
               <div><dt>Crop</dt><dd>{cropName || "Not selected"}</dd></div>
               <div><dt>Growth stage</dt><dd>{f.growthStage || "Not selected"}</dd></div>
+              <div><dt>Moisture</dt><dd>{f.moisture === "" ? "Not entered" : `${f.moisture}%`}</dd></div>
               <div><dt>Previously used</dt><dd>{filledPrev.length ? "Entered" : "None entered"}</dd></div>
             </dl>
             <button className="btn btn-primary btn-lg btn-block" style={{ marginTop: 20 }}>Generate report</button>
