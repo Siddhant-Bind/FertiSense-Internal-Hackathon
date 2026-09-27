@@ -2,6 +2,7 @@ from pydantic import BaseModel, model_validator
 from typing import Optional
 
 class UserSignup(BaseModel):
+    name: str
     email: str
     mobile_number: str
     state: str

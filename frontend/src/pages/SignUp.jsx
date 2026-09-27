@@ -10,6 +10,7 @@ const STRENGTH = ["Too weak", "Weak", "Fair", "Good", "Strong"];
 
 function validate(f) {
   const e = {
+    name: f.name.trim() ? "" : "Please enter your name",
     email: validators.email(f.email),
     phone: validators.phone(f.phone),
     password: validators.password(f.password),
@@ -25,7 +26,7 @@ function validate(f) {
 export default function SignUp() {
   const { register } = useAuth();
   const nav = useNavigate();
-  const [f, setF] = useState({ email: "", phone: "", password: "", confirm: "", state: "", district: "", agree: false });
+  const [f, setF] = useState({ name: "", email: "", phone: "", password: "", confirm: "", state: "", district: "", agree: false });
   const [touched, setTouched] = useState({});
   const [submitted, setSubmitted] = useState(false);
   const [serverErr, setServerErr] = useState({});
@@ -43,7 +44,7 @@ export default function SignUp() {
     if (Object.keys(validate(f)).length) return;
     setBusy(true);
     
-    const res = await register(f.email, `+91-${f.phone}`, f.password, f.confirm, f.state, f.district);
+    const res = await register(f.name, f.email, `+91-${f.phone}`, f.password, f.confirm, f.state, f.district);
     setBusy(false);
 
     if (res.success) {
@@ -59,6 +60,10 @@ export default function SignUp() {
       <p className="sub">Takes under a minute. No fees.</p>
       <form className="form" onSubmit={submit} noValidate>
         {serverErr.form && <div className="form-alert" role="alert">{serverErr.form}</div>}
+        <Field id="name" label="Full name" error={show("name")}>
+          <input id="name" className="input" type="text" autoComplete="name" value={f.name}
+            onChange={(e) => set({ name: e.target.value })} onBlur={blur("name")} aria-invalid={!!show("name") || undefined} />
+        </Field>
         <Field id="email" label="Email address" error={show("email")}>
           <input id="email" className="input" type="email" autoComplete="email" inputMode="email" value={f.email}
             onChange={(e) => set({ email: e.target.value })} onBlur={blur("email")} aria-invalid={!!show("email") || undefined} />

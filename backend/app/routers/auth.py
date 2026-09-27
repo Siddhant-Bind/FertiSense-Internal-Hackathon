@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, HTTPException, status, Depends
 from app.schemas.auth import UserSignup, UserLogin, TokenResponse
 from app.db.supabase_client import supabase
 
@@ -21,6 +21,7 @@ def signup(user_data: UserSignup):
         try:
             supabase.table("users").upsert({
                 "id": user.id,
+                "full_name": user_data.name,
                 "email_or_phone": user_data.email,
                 "mobile_number": user_data.mobile_number,
                 "state": user_data.state,
@@ -58,3 +59,38 @@ def login(user_data: UserLogin):
         )
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=str(e))
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from pydantic import BaseModel
+
+class UserProfile(BaseModel):
+    id: str
+    full_name: str | None = None
+    email_or_phone: str | None = None
+    state: str | None = None
+    district: str | None = None
+
+security = HTTPBearer()
+
+@router.get("/me", response_model=UserProfile)
+def get_me(credentials: HTTPAuthorizationCredentials = Depends(security)):
+    try:
+        user_response = supabase.auth.get_user(credentials.credentials)
+        if not user_response.user:
+            raise HTTPException(status_code=401, detail="Invalid token")
+            
+        user_id = user_response.user.id
+        db_user = supabase.table("users").select("*").eq("id", user_id).execute()
+        
+        if not db_user.data:
+            return UserProfile(id=str(user_id), email_or_phone=user_response.user.email)
+            
+        u = db_user.data[0]
+        return UserProfile(
+            id=u.get("id"),
+            full_name=u.get("full_name"),
+            email_or_phone=u.get("email_or_phone"),
+            state=u.get("state"),
+            district=u.get("district")
+        )
+    except Exception as e:
+        raise HTTPException(status_code=401, detail=str(e))

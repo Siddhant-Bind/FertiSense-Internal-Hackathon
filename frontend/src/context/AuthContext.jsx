@@ -36,11 +36,10 @@ export function AuthProvider({ children }) {
       setLoading(false);
       return;
     }
-    // We don't have a /me endpoint, so we decode the JWT to restore session
-    const decoded = decodeJwt(token);
-    if (decoded && decoded.sub) {
-      setUser({ id: decoded.sub });
-    } else {
+    try {
+      const res = await api.get('/auth/me');
+      setUser({ id: res.data.id, name: res.data.full_name, email: res.data.email_or_phone });
+    } catch (error) {
       localStorage.removeItem("token");
       setToken(null);
       setUser(null);
@@ -56,9 +55,16 @@ export function AuthProvider({ children }) {
     try {
       const res = await axios.post(`${BACKEND_URL}/auth/login`, { email, password });
       if (res.data.access_token) {
-        setToken(res.data.access_token);
-        setUser({ id: res.data.user_id });
         localStorage.setItem("token", res.data.access_token);
+        setToken(res.data.access_token);
+        
+        try {
+          const meRes = await axios.get(`${BACKEND_URL}/auth/me`, { headers: { Authorization: `Bearer ${res.data.access_token}` } });
+          setUser({ id: meRes.data.id, name: meRes.data.full_name, email: meRes.data.email_or_phone });
+        } catch (e) {
+          setUser({ id: res.data.user_id });
+        }
+        
         return { success: true };
       }
       return { success: false, message: "Invalid response from server" };
@@ -67,14 +73,21 @@ export function AuthProvider({ children }) {
     }
   };
 
-  const register = async (email, mobile_number, password, confirm_password, state, district) => {
+  const register = async (name, email, mobile_number, password, confirm_password, state, district) => {
     try {
-      const payload = { email, mobile_number, password, confirm_password, state, district };
+      const payload = { name, email, mobile_number, password, confirm_password, state, district };
       const res = await axios.post(`${BACKEND_URL}/auth/signup`, payload);
       if (res.data.access_token) {
-        setToken(res.data.access_token);
-        setUser({ id: res.data.user_id });
         localStorage.setItem("token", res.data.access_token);
+        setToken(res.data.access_token);
+
+        try {
+          const meRes = await axios.get(`${BACKEND_URL}/auth/me`, { headers: { Authorization: `Bearer ${res.data.access_token}` } });
+          setUser({ id: meRes.data.id, name: meRes.data.full_name, email: meRes.data.email_or_phone });
+        } catch (e) {
+          setUser({ id: res.data.user_id });
+        }
+
         return { success: true };
       }
       return { success: false, message: "Invalid response from server" };

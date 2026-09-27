@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 
-export const initials = (email = "") => (email.trim()[0] || "?").toUpperCase();
+export const initials = (str = "") => (str.trim()[0] || "?").toUpperCase();
 
 export default function AvatarMenu() {
   const { user, logout } = useAuth();
@@ -19,15 +19,17 @@ export default function AvatarMenu() {
   }, []);
 
   if (!user) return null;
+  const displayName = user.name || user.email || user.id;
+
   return (
     <div className="avatar-wrap" ref={ref}>
       <button className="avatar" aria-haspopup="menu" aria-expanded={open} aria-label="Open profile menu" onClick={() => setOpen((o) => !o)}>
-        {initials(user.email || user.id)}
+        {initials(displayName)}
       </button>
       {open && (
         <div className="menu" role="menu">
           <div className="who">
-            <b>{user.email || user.id}</b>
+            <b>{displayName}</b>
           </div>
           <Link role="menuitem" to="/profile" onClick={() => setOpen(false)}>Profile</Link>
           <Link role="menuitem" to="/dashboard" onClick={() => setOpen(false)}>My recommendations</Link>
