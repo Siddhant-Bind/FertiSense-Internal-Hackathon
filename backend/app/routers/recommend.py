@@ -51,7 +51,7 @@ async def recommend(req: RecommendRequest, user_id: Optional[str] = Depends(get_
     )
 
     # 2. Weather resolution
-    temp, humidity = await get_weather(soil["latitude"], soil["longitude"])
+    temp, humidity, rain_probability, rain_amount, wind_speed = await get_weather(soil["latitude"], soil["longitude"])
 
     # 3. ML prediction
     rec_fertilizer_id = predict_fertilizer(
@@ -80,7 +80,10 @@ async def recommend(req: RecommendRequest, user_id: Optional[str] = Depends(get_
         rec_fertilizer_name, comparison_result, req.growth_stage,
         soil["n"], soil["p"], soil["k"], soil["ph"],
         temp, humidity, req.moisture, req.prev_fertilizer_qty, req.organic_carbon,
-        previous_report=previous_report
+        previous_report=previous_report,
+        rain_probability=rain_probability,
+        rain_amount=rain_amount,
+        wind_speed=wind_speed
     )
 
     # 6. Blend Quantification
@@ -90,7 +93,10 @@ async def recommend(req: RecommendRequest, user_id: Optional[str] = Depends(get_
     clamped_qty, timing_override, explanation_override = apply_dosage_clamp(
         req.field_id, rec_fertilizer_id, llm_output["quantity"]
     )
-    final_timing = timing_override or llm_output["timing"]
+    timing_data = llm_output.get("timing", {})
+    if isinstance(timing_data, str):
+        timing_data = {"recommendation": timing_data, "weather_relevance": ""}
+    final_timing = timing_override or timing_data.get("recommendation", "Apply as advised by a local agronomist.")
     final_explanation = explanation_override or llm_output["explanation"]
     
     # 8. Log and respond
@@ -117,7 +123,15 @@ async def recommend(req: RecommendRequest, user_id: Optional[str] = Depends(get_
         "blend_details": {
             "blend": enriched_blend,
             "blend_total_cost": blend_total_cost,
-            "npk_fulfillment": npk_fulfillment
+            "npk_fulfillment": npk_fulfillment,
+            "advisory": {
+                "timing": {**timing_data, "recommendation": final_timing},
+                "nutrient_assessment": llm_output.get("nutrient_assessment", {}),
+                "previous_report_relevance": llm_output.get("previous_report_relevance", {}),
+                "weather_assessment": llm_output.get("weather_assessment", {}),
+                "sustainability": llm_output.get("sustainability", {}),
+                "warning": llm_output.get("warning"),
+            }
         }
     }
 
@@ -140,5 +154,6 @@ async def recommend(req: RecommendRequest, user_id: Optional[str] = Depends(get_
         comparison_result=comparison_result,
         blend=enriched_blend,
         blend_total_cost=blend_total_cost,
-        npk_fulfillment=npk_fulfillment
+        npk_fulfillment=npk_fulfillment,
+        advisory=insert_data["blend_details"]["advisory"]
     )

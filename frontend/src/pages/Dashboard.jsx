@@ -9,16 +9,23 @@ const fmt = (iso) => new Date(iso).toLocaleDateString("en-IN", { day: "numeric",
 export default function Dashboard() {
   const { user, api } = useAuth();
   const [recs, setRecs] = useState(null);
+  const [fields, setFields] = useState([]);
   const [error, setError] = useState("");
   const [q, setQ] = useState("");
 
-  useEffect(() => { 
-    api.get("/recommendations")
-      .then(res => setRecs(res.data))
-      .catch((e) => setError(e.response?.data?.detail || e.message)); 
+  useEffect(() => {
+    Promise.all([api.get("/recommendations"), api.get("/fields")])
+      .then(([recommendations, fieldList]) => {
+        setRecs(recommendations.data);
+        setFields(fieldList.data);
+      })
+      .catch((e) => setError(e.response?.data?.detail || e.message));
   }, [api]);
 
-  const filtered = useMemo(() => (recs || []).filter((r) => (r.rec_fertilizer + (r.application_timing || "")).toLowerCase().includes(q.toLowerCase())), [recs, q]);
+  const fieldNames = useMemo(() => new Map(fields.map((field) => [String(field.id), field.field_name])), [fields]);
+  const fieldName = (recommendation) => fieldNames.get(String(recommendation.field_id)) || "Field not named";
+  const filtered = useMemo(() => (recs || []).filter((r) =>
+    (r.rec_fertilizer + (r.application_timing || "") + fieldName(r)).toLowerCase().includes(q.toLowerCase())), [recs, q, fieldNames]);
   const thisSeason = (recs || []).filter((r) => Date.now() - new Date(r.created_at) < 120 * 864e5).length;
   const avgScore = "–"; // Soil score is not persisted per API.md
 
@@ -44,7 +51,7 @@ export default function Dashboard() {
           <div className="toolbar">
             <h2 id="hist">History</h2>
             {recs?.length > 0 && (
-              <input className="input search" type="search" placeholder="Search fertilizer, timing" aria-label="Search history"
+              <input className="input search" type="search" placeholder="Search field, fertilizer, timing" aria-label="Search history"
                 value={q} onChange={(e) => setQ(e.target.value)} />
             )}
           </div>
@@ -75,8 +82,9 @@ export default function Dashboard() {
                 <li key={r.id}>
                   <Link to={`/reports/${r.id}`} className="hrow">
                     <div>
-                      <div className="t">{r.rec_fertilizer}</div>
-                      <div className="s">{r.rec_quantity} kg/acre</div>
+                      
+                      <div className="t">{fieldName(r)}</div>
+                      <div className="s">{r.rec_fertilizer} · {r.rec_quantity} kg/acre</div>
                     </div>
                     <div className="hide-sm">
                       <div className="t">{fmt(r.created_at)}</div>

@@ -60,6 +60,13 @@ export default function Report() {
   const blendDetails = rec.blend_details || null;
   const blendList = blendDetails?.blend || [];
   const blendCost = blendDetails?.blend_total_cost || 0;
+  const advisory = rec.advisory || blendDetails?.advisory || {};
+  const nutrientAssessment = advisory.nutrient_assessment || {};
+  const weatherAssessment = advisory.weather_assessment || {};
+  const historyAssessment = advisory.previous_report_relevance || {};
+  const sustainability = advisory.sustainability || {};
+  const timing = advisory.timing || {};
+  const hasAdvisory = Object.keys(advisory).length > 0;
 
   const shareText = () =>
     `FertiSense report: ${cropName} at ${rec.growth_stage} stage (per acre)\nRecommended: ${fertName} - ${rec.rec_quantity} ${rec.rec_unit}\nTiming: ${rec.application_timing}`;
@@ -134,12 +141,30 @@ export default function Report() {
           <section className="panel" aria-labelledby="sched">
             <h2 id="sched">When to apply</h2>
             <p className="lead" style={{ whiteSpace: 'pre-line' }}>{rec.application_timing}</p>
+            {timing.weather_relevance && <p className="muted" style={{ whiteSpace: 'pre-line', marginBottom: 0 }}><b>Weather note:</b> {timing.weather_relevance}</p>}
           </section>
 
           <section className="panel" aria-labelledby="model">
             <h2 id="model">Why {fertName}</h2>
             <p className="lead" style={{ whiteSpace: 'pre-line' }}>{rec.explanation}</p>
           </section>
+
+          {hasAdvisory && <section className="panel" aria-labelledby="field-assessment">
+            <h2 id="field-assessment">Field assessment</h2>
+            {Object.keys(nutrientAssessment).length > 0 && <><h3>Soil nutrients</h3><dl className="report-assessment">
+              {[["Nitrogen", nutrientAssessment.nitrogen], ["Phosphorus", nutrientAssessment.phosphorus], ["Potassium", nutrientAssessment.potassium], ["pH", nutrientAssessment.ph]].filter(([, value]) => value).map(([label, value]) => <div key={label}><dt>{label}</dt><dd>{value}</dd></div>)}
+            </dl></>}
+            {(weatherAssessment.impact || weatherAssessment.relevant_parameters?.length) && <><h3>Weather and application</h3>
+              {weatherAssessment.relevant_parameters?.length > 0 && <p className="muted small">Considered: {weatherAssessment.relevant_parameters.join(", ")}</p>}
+              <p className="lead">{weatherAssessment.impact}</p>
+            </>}
+            {historyAssessment.relevant_information && <><h3>Previous field activity</h3><p className="lead"><b>Relevant history:</b> {historyAssessment.relevant_information}</p>
+              {historyAssessment.impact_on_current_recommendation && <p className="lead"><b>Effect on this plan:</b> {historyAssessment.impact_on_current_recommendation}</p>}</>}
+            {Object.keys(sustainability).length > 0 && <><h3>Sustainable use</h3><dl className="report-assessment">
+              {[["Nutrient efficiency", sustainability.nutrient_use_efficiency], ["Loss reduction", sustainability.nutrient_loss_reduction], ["Soil health", sustainability.soil_health]].filter(([, value]) => value).map(([label, value]) => <div key={label}><dt>{label}</dt><dd>{value}</dd></div>)}
+            </dl></>}
+            {advisory.warning && <div className="form-alert" style={{ marginTop: 18 }}><b>Important:</b> {advisory.warning}</div>}
+          </section>}
 
           <div>
             <button className="btn btn-danger" onClick={remove}>Delete report</button>

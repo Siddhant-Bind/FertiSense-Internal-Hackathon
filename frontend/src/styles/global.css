@@ -205,6 +205,10 @@ p { margin: 0; }
 /* report */
 .report-grid { display: grid; grid-template-columns: 1.35fr 1fr; gap: 18px; align-items: start; }
 .report-grid > div { display: grid; gap: 18px; }
+.report-assessment { display: grid; gap: 10px; margin: 10px 0 22px; }
+.report-assessment div { display: grid; grid-template-columns: minmax(130px, .28fr) 1fr; gap: 14px; }
+.report-assessment dt { color: var(--muted); font-weight: 700; }
+.report-assessment dd { margin: 0; }
 @media (max-width: 920px) { .report-grid { grid-template-columns: 1fr; } }
 .buy-panel { border: 2px solid var(--green); }
 .chips { display: flex; flex-wrap: wrap; gap: 8px; }

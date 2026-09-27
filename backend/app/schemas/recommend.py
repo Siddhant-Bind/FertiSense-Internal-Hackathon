@@ -44,3 +44,4 @@ class RecommendResponse(BaseModel):
     blend: List[BlendItem]
     blend_total_cost: float
     npk_fulfillment: NpkFulfillment
+    advisory: Dict[str, Any] = Field(default_factory=dict)
